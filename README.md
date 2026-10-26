@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🤖 AI Token & Cost Calculator + Prompt Compressor
 
 A web-based developer utility that estimates AI prompt token usage, compares API costs across multiple AI models, and compresses prompts to reduce unnecessary text.
@@ -101,3 +102,7 @@ This project started as my own idea to create a tool that estimates AI token usa
 ## 📄 License
 
 This project is available for learning and personal development. Add a license file if you want to specify the permissions and conditions for reuse.
+=======
+# ai-token-cost-calculator
+An AI Token &amp; Cost Calculator with Prompt Compressor 💡 | Original idea by Nouman Lodhi, developed with AI assistance using HTML, CSS, and JavaScript.
+>>>>>>> 7894bc9fd7f86a0b737aa957ff42377caccb2552
