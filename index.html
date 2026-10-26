@@ -1,0 +1,285 @@
+!<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Token & Cost Calculator + Prompt Compressor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0b0f19; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="text-center space-y-2">
+      <span class="px-3 py-1 text-xs font-semibold bg-indigo-500/20 text-indigo-400 rounded-full border border-indigo-500/30">Developer Utility Tool</span>
+      <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">AI API Cost Calculator & Prompt Compressor</h1>
+      <p class="text-slate-400 text-sm md:text-base">Calculate real-time token costs across OpenAI, Claude & DeepSeek — and shrink your prompt to save API spend.</p>
+    </div>
+
+    <!-- Main Input & Compressor Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Original Prompt -->
+      <div class="glass rounded-2xl p-5 space-y-4">
+        <div class="flex justify-between items-center">
+          <label class="font-semibold text-white flex items-center gap-2">
+            <span>1. Original Prompt</span>
+          </label>
+          <button onclick="loadSample()" class="text-xs text-indigo-400 hover:text-indigo-300 underline">Load Bloated Sample</button>
+        </div>
+        
+        <textarea id="promptInput" rows="9" 
+          class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"
+          placeholder="Paste your long system prompt or user prompt here..."></textarea>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-3 gap-3 text-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          <div>
+            <p class="text-xs text-slate-400">Characters</p>
+            <p id="charCount" class="text-lg font-bold text-white">0</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Words</p>
+            <p id="wordCount" class="text-lg font-bold text-white">0</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Est. Tokens</p>
+            <p id="tokenCount" class="text-lg font-bold text-indigo-400">0</p>
+          </div>
+        </div>
+
+        <button onclick="compressPrompt()" 
+          class="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2">
+          <span>⚡ Compress Prompt (Save Tokens)</span>
+        </button>
+      </div>
+
+      <!-- Compressed Output -->
+      <div class="glass rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <label class="font-semibold text-emerald-400 flex items-center gap-2">
+              <span>2. Optimized Prompt</span>
+            </label>
+            <span id="savingsBadge" class="px-2.5 py-0.5 text-xs font-bold bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/30">0% Saved</span>
+          </div>
+
+          <textarea id="compressedOutput" rows="9" readonly
+            class="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-sm text-emerald-100 focus:outline-none resize-none"
+            placeholder="Click 'Compress Prompt' to remove fluff, polite filler words, and redundant phrasing without losing meaning..."></textarea>
+
+          <!-- Compressed Stats Bar -->
+          <div class="grid grid-cols-3 gap-3 text-center bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <div>
+              <p class="text-xs text-slate-400">New Tokens</p>
+              <p id="newTokenCount" class="text-lg font-bold text-emerald-400">0</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Tokens Saved</p>
+              <p id="tokensSaved" class="text-lg font-bold text-white">0</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Cost Reduction</p>
+              <p id="costSavedPercent" class="text-lg font-bold text-emerald-400">$0.00</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <button onclick="copyCompressed()" id="copyBtn"
+            class="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl border border-slate-700 transition">
+            📋 Copy Optimized Prompt
+          </button>
+          <button onclick="useCompressedAsInput()"
+            class="py-3 px-4 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-medium rounded-xl border border-emerald-500/30 transition text-sm whitespace-nowrap">
+            Apply to Calculator ↑
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scaling Multiplier Controls -->
+    <div class="glass rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="space-y-1">
+        <h3 class="font-semibold text-white">Production Scale Simulator</h3>
+        <p class="text-xs text-slate-400">See how much this prompt costs when run repeatedly in workflows (e.g., n8n, SaaS apps, chatbots).</p>
+      </div>
+      <div class="flex items-center gap-4 w-full md:w-auto">
+        <label class="text-sm text-slate-300 whitespace-nowrap">API Calls:</label>
+        <select id="callMultiplier" onchange="updateCalculations()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="1">1 Call (Single Run)</option>
+          <option value="100">100 Calls</option>
+          <option value="1000" selected>1,000 Calls</option>
+          <option value="10000">10,000 Calls</option>
+          <option value="100000">100,000 Calls</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cost Comparison Table -->
+    <div class="glass rounded-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+        <h2 class="font-bold text-lg text-white">Live API Cost Breakdown (Input Tokens)</h2>
+        <span class="text-xs text-slate-400">Prices per 1M Input Tokens</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-xs uppercase text-slate-400 bg-slate-900/40">
+              <th class="p-4">AI Model</th>
+              <th class="p-4">Provider</th>
+              <th class="p-4">Rate / 1M Tokens</th>
+              <th class="p-4">Original Cost</th>
+              <th class="p-4">Compressed Cost</th>
+              <th class="p-4 text-emerald-400">Net Savings</th>
+            </tr>
+          </thead>
+          <tbody id="costTableBody" class="divide-y divide-slate-800/60 text-sm">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Model Pricing Database (USD per 1M input tokens)
+    const models = [
+      { name: "GPT-4o", provider: "OpenAI", rate: 2.50, badge: "bg-emerald-500/10 text-emerald-400" },
+      { name: "GPT-4o-mini", provider: "OpenAI", rate: 0.15, badge: "bg-emerald-500/10 text-emerald-400" },
+      { name: "o1 (Reasoning)", provider: "OpenAI", rate: 15.00, badge: "bg-emerald-500/10 text-emerald-400" },
+      { name: "Claude 3.5 Sonnet", provider: "Anthropic", rate: 3.00, badge: "bg-amber-500/10 text-amber-400" },
+      { name: "Claude 3.5 Haiku", provider: "Anthropic", rate: 0.80, badge: "bg-amber-500/10 text-amber-400" },
+      { name: "DeepSeek-V3", provider: "DeepSeek", rate: 0.27, badge: "bg-blue-500/10 text-blue-400" },
+      { name: "DeepSeek-R1", provider: "DeepSeek", rate: 0.55, badge: "bg-blue-500/10 text-blue-400" }
+    ];
+
+    let currentOrigTokens = 0;
+    let currentCompTokens = 0;
+
+    // Accurate Heuristic Token Estimator (~4 chars per token + punctuation/whitespace weighting)
+    function estimateTokens(text) {
+      if (!text || text.trim().length === 0) return 0;
+      const words = text.trim().split(/\s+/).length;
+      const chars = text.length;
+      return Math.max(1, Math.ceil((chars / 4 + words * 1.33) / 2));
+    }
+
+    // Smart Client-Side Prompt Compressor Dictionary
+    const replacementRules = [
+      { pattern: /\b(please|kindly|could you please|i would like you to|i want you to|can you please|if possible)\b/gi, replace: "" },
+      { pattern: /\b(act as a professional|act as an expert|you are a highly experienced and knowledgeable)\b/gi, replace: "Role:" },
+      { pattern: /\b(make sure that you|ensure that you|it is very important that you|always remember to)\b/gi, replace: "Must" },
+      { pattern: /\b(in order to)\b/gi, replace: "to" },
+      { pattern: /\b(due to the fact that|for the reason that|because of the fact that)\b/gi, replace: "because" },
+      { pattern: /\b(at this point in time|at the present time)\b/gi, replace: "now" },
+      { pattern: /\b(provide a detailed and comprehensive explanation of)\b/gi, replace: "Explain in detail:" },
+      { pattern: /\b(do not hesitate to|feel free to)\b/gi, replace: "" },
+      { pattern: /\b(as a matter of fact|in actual fact)\b/gi, replace: "" },
+      { pattern: /\b(step by step|step-by-step)\b/gi, replace: "stepwise" },
+      { pattern: /\b(for example|for instance)\b/gi, replace: "e.g.," },
+      { pattern: /\b(that is to say|in other words)\b/gi, replace: "i.e.," },
+      { pattern: /\b(with regard to|in reference to|concerning the matter of)\b/gi, replace: "re:" },
+      { pattern: /\b(thank you so much in advance|thank you in advance|thanks a lot)\b/gi, replace: "" }
+    ];
+
+    function compressPrompt() {
+      const input = document.getElementById("promptInput").value;
+      if (!input.trim()) return;
+
+      let compressed = input;
+      replacementRules.forEach(rule => {
+        compressed = compressed.replace(rule.pattern, rule.replace);
+      });
+
+      // Clean extra spaces & redundant punctuation
+      compressed = compressed
+        .replace(/\s+/g, " ")
+        .replace(/\s+([.,!?:;])/g, "$1")
+        .trim();
+
+      document.getElementById("compressedOutput").value = compressed;
+      updateCalculations();
+    }
+
+    function updateCalculations() {
+      const text = document.getElementById("promptInput").value;
+      const compText = document.getElementById("compressedOutput").value;
+      const multiplier = parseInt(document.getElementById("callMultiplier").value) || 1;
+
+      const chars = text.length;
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      currentOrigTokens = estimateTokens(text);
+      currentCompTokens = compText.trim() ? estimateTokens(compText) : currentOrigTokens;
+
+      document.getElementById("charCount").innerText = chars.toLocaleString();
+      document.getElementById("wordCount").innerText = words.toLocaleString();
+      document.getElementById("tokenCount").innerText = currentOrigTokens.toLocaleString();
+
+      const savedTokens = Math.max(0, currentOrigTokens - currentCompTokens);
+      const savedPercent = currentOrigTokens > 0 ? Math.round((savedTokens / currentOrigTokens) * 100) : 0;
+
+      document.getElementById("newTokenCount").innerText = (compText.trim() ? currentCompTokens : 0).toLocaleString();
+      document.getElementById("tokensSaved").innerText = savedTokens.toLocaleString();
+      document.getElementById("savingsBadge").innerText = `${savedPercent}% Saved`;
+
+      // Render Table
+      const tbody = document.getElementById("costTableBody");
+      tbody.innerHTML = "";
+
+      models.forEach(m => {
+        const origCost = ((currentOrigTokens * multiplier) / 1000000) * m.rate;
+        const compCost = ((currentCompTokens * multiplier) / 1000000) * m.rate;
+        const diff = Math.max(0, origCost - compCost);
+
+        const row = `
+          <tr class="hover:bg-slate-800/30 transition">
+            <td class="p-4 font-semibold text-white">${m.name}</td>
+            <td class="p-4"><span class="px-2 py-1 text-xs rounded-md ${m.badge}">${m.provider}</span></td>
+            <td class="p-4 text-slate-400">$${m.rate.toFixed(2)}</td>
+            <td class="p-4 font-mono text-slate-200">$${origCost.toFixed(5)}</td>
+            <td class="p-4 font-mono text-emerald-300">$${compCost.toFixed(5)}</td>
+            <td class="p-4 font-mono font-bold text-emerald-400">-$${diff.toFixed(5)}</td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+      });
+
+      // Highlight GPT-4o savings in card
+      const gpt4oSaved = ((savedTokens * multiplier) / 1000000) * 2.50;
+      document.getElementById("costSavedPercent").innerText = `$${gpt4oSaved.toFixed(4)}`;
+    }
+
+    function loadSample() {
+      const bloated = `Hello AI! Please could you kindly act as a highly experienced and knowledgeable senior full-stack software developer? I would like you to make sure that you review the following code due to the fact that we are experiencing memory leaks at this point in time. In order to fix this issue, please provide a detailed and comprehensive explanation of why the bug is happening step by step, for example showing the exact variables causing the problem. Furthermore, it is very important that you rewrite the function so that it runs much faster. Do not hesitate to point out any security vulnerabilities with regard to user authentication. Thank you so much in advance!`;
+      document.getElementById("promptInput").value = bloated;
+      compressPrompt();
+    }
+
+    function copyCompressed() {
+      const compText = document.getElementById("compressedOutput");
+      if (!compText.value) return;
+      navigator.clipboard.writeText(compText.value);
+      const btn = document.getElementById("copyBtn");
+      btn.innerText = "✅ Copied!";
+      setTimeout(() => btn.innerText = "📋 Copy Optimized Prompt", 2000);
+    }
+
+    function useCompressedAsInput() {
+      const compText = document.getElementById("compressedOutput").value;
+      if (!compText) return;
+      document.getElementById("promptInput").value = compText;
+      document.getElementById("compressedOutput").value = "";
+      updateCalculations();
+    }
+
+    document.getElementById("promptInput").addEventListener("input", updateCalculations);
+    window.onload = updateCalculations;
+  </script>
+</body>
+</html>
